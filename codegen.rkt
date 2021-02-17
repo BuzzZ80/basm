@@ -172,10 +172,11 @@
 
 ; program must be a list of strings
 (define (assemble program)
-  (define codegen-items (for/list ([str program])
+  (define codegen-items (for/list ([str program]
+                                   [line-number (in-naturals 1)])
                           (define ast (parse-string str))
                           (unless ast
-                            (raise-user-error (format "unable to parse '~a'" str)))
+                            (raise-user-error (format "unable to parse '~a' at line ~a" str line-number)))
                           (make-codegen-item ast)))
   (define environment (gather-environment codegen-items))
   (define final-bitcode (stitch-bitcode codegen-items environment))
