@@ -1,0 +1,66 @@
+Assembly         |3 Bit Cond |3 Bit Op |1/3b OP / 2/3b Rs2|3 Bit Rs1 | RTL                        |Full Name
+
+MOV Rs2, Rs1     |Condition  |000      |Rs2               |Rs1       | Rs2 <= Rs1                 | Move
+MOV Rs2, (Rs1)   |Condition  |001      |0     |Rs2        |Rs1       | Rs2 <= (Rs1)               | Move
+MOV Rs2, (Rs1+Ix)|Condition  |001      |1     |Rs2        |Rs1       | Rs2 <= (Rs1+Ix)            | Move
+MOV (Rs1), Rs2   |Condition  |010      |0     |Rs2        |Rs1       | (Rs1) <= Rs2               | Move
+MOV (Rs1+Ix), Rs2|Condition  |010      |1     |Rs2        |Rs1       | (Rs1+Ix) <= Rs2            | Move
+unused           |Condition  |011      |xxx               |Rs1       |                            | 
+
+ADD Ac, Rs1      |Condition  |100      |000               |Rs1       | Ac <= Ac + Rs1             | Add
+ADC Ac, Rs1      |Condition  |100      |001               |Rs1       | Ac <= Ac + Rs1 + Cry       | Add with carry
+SUB Ac, Rs1      |Condition  |100      |010               |Rs1       | Ac <= Ac - Rs1             | Subtract
+SBB Ac, Rs1      |Condition  |100      |011               |Rs1       | Ac <= Ac - Rs1 - Cry       | Subtract with borrow
+SUB Rs1, Ac      |Condition  |100      |100               |Rs1       | Ac <= Rs1 - Ac             | Subtract
+SBB Rs1, Ac      |Condition  |100      |101               |Rs1       | Ac <= Rs1 - Ac - Cry       | Subtract with borrow
+SBW Ac, Rs1      |Condition  |100      |110               |Rs1       | Ac <= -Rs1 - Ac - 1        | Subtract (weird)
+SWB Ac, Rs1      |Condition  |100      |111               |Rs1       | Ac <= -Rs1 - Ac - 1 - Cry  | Subtract (weird) with borrow
+
+NND Ac, Rs1      |Condition  |101      |000               |Rs1       | Ac <= (Ac & Rs1)'          | NAND
+AND Ac, Rs1      |Condition  |101      |001               |Rs1       | Ac <= (Ac & Rs1)           | AND
+AIB Ac, Rs1      |Condition  |101      |010               |Rs1       | Ac <= (Ac & Rs1')'         | A IMPLIES B
+ANB Ac, Rs1      |Condition  |101      |011               |Rs1       | Ac <= (Ac & Rs1')          | A NIMPLIES B
+BIA Ac, Rs1      |Condition  |101      |100               |Rs1       | Ac <= (Ac' & Rs1)'         | B IMPLIES A
+BNA Ac, Rs1      |Condition  |101      |101               |Rs1       | Ac <= (Ac' & Rs1)          | B NIMPLES A
+ORA Ac, Rs1      |Condition  |101      |110               |Rs1       | Ac <= (Ac' & Rs1')'        | OR
+NOR Ac, Rs1      |Condition  |101      |111               |Rs1       | Ac <= (Ac' & Rs1')         | NOR
+
+JMP Rs1          |Condition  |110      |000               |Rs1       | Pc <= Rs1 - 1              | Jump
+HLT              |Condition  |110      |001               |Rs1       | Hlt <= 1                   | Halt
+JSR Rs1          |Condition  |110      |010               |Rs1       | Stack <= Pc, Pc <= Rs1 - 1 | Jump to subroutine
+RET              |Condition  |110      |011               |Rs1       | PC <= Stack                | Return from subroutine
+DEC Rs1          |Condition  |110      |100               |Rs1       | Rs1 <= Rs1 - 1             | Decrement
+INC Rs1          |Condition  |110      |101               |Rs1       | Rs1 <= Rs1 + 1             | Increment
+unused           |Condition  |110      |110               |Rs1       |                            | 
+unused           |Condition  |110      |111               |Rs1       |                            | 
+
+CMP Ac, Rs1      |Condition  |111      |000               |Rs1       | Ac - Rs1                   | Compare
+CMP Rs1, Ac      |Condition  |111      |001               |Rs1       | Rs1 - Ac                   | Compare
+XOR Ac, Rs1      |Condition  |111      |010               |Rs1       | Ac <= (Ac ⊕ Rs1)           | Exclusive OR
+XNR Ac, Rs1      |Condition  |111      |011               |Rs1       | Ac <= (Ac ⊕ Rs1)'          | Exclusive NOR
+CLC              |Condition  |111      |100               |Rs1       | Cry <= 0                   | Clear Cry
+CLZ              |Condition  |111      |101               |Rs1       | Z <= 0                     | Clear Z
+SEC              |Condition  |111      |110               |Rs1       | Cry <= 1                   | Set Cry
+SEZ              |Condition  |111      |111               |Rs1       | Z <= 1                     | Set Z
+
+Condition word:
+1b Inv |1b Z |1b Cry |Condition
+0      |0    |0      |1
+0      |0    |1      |Cry
+0      |1    |0      |Z
+0      |1    |1      |Cry & Z
+1      |0    |0      |1
+1      |0    |1      |Cry'
+1      |1    |0      |Z'
+1      |1    |1      |Cry' & Z'
+
+Register word:
+1b Mem |1b S1 |1b S2 |Register                  |Register Shorthand |
+0      |0     |0     |Accumulator               |Ac                 |
+0      |0     |1     |B Register                |Br                 |
+0      |1     |0     |Index Register            |Ix                 |
+0      |1     |1     |Stack Pointer             |Sp                 |
+1      |0     |0     |Immediate                 |IMM                |
+1      |0     |1     |Immediate Pointer         |(IMM)              |
+1      |1     |0     |Immediate Pointer Indexed |(IMM,Ix)           |
+1      |1     |1     |Stack                     |Stack              |
