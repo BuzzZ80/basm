@@ -45,6 +45,7 @@
            racket/string
            racket/port
            racket/bytes
+           "error.rkt"
            "codegen.rkt")
 
   #;("mov ac, ((0o420 + ix) + ix)"
@@ -66,53 +67,74 @@
 
 
   (require racket/cmdline)
-  (begin 
-    (define output-mode (make-parameter 'text))
-    (define output-path (make-parameter "-"))
-    (define input-path (make-parameter "-"))
+  (begin
+    (define binary-padding (make-parameter #true))
+    (define output-mode (make-parameter 'auto))
+    (define output-path (make-parameter #false))
+    (define input-path (make-parameter #false))
     (command-line
      #:program "basm"
      #:once-each
      [("-o" "--output") filepath "File to output to"
                         (output-path filepath)]
+     [("--no-padding") "Don't pad the binary to 4096 words"
+                       (binary-padding #false)]
      #:once-any
      [("-t" "--text") "Output code in text format (one word per line in octal)"
                       (output-mode 'text)]
-     [("-b" "--binary") "Output code in binary format (each word as a big-endian 16-bit integer)"
+     [("-b" "--binary") "Output code in binary format (each word as a little-endian 16-bit integer)"
                         (output-mode 'binary)]
      #:args ([input-path-arg "-"])
      (input-path input-path-arg))
 
+    (error-file-name (input-path))
+    
     (current-output-port
      (match (output-path)
-       ["-" (current-output-port)]
-       [filepath (open-output-file filepath #:mode (output-mode) #:exists 'truncate/replace)]))
+       [(or #f "-") (current-output-port)]
+       [filepath (open-output-file filepath
+                                   #:mode (if (eq? 'auto (output-mode))
+                                              'binary
+                                              (output-mode))
+                                   #:exists 'truncate/replace)]))
+
+    (output-mode (match (output-mode)
+                   ['auto (if (terminal-port? (current-output-port))
+                              'text
+                              'binary)]
+                   [mode mode]))
 
     (current-input-port
      (match (input-path)
-       ["-" (current-input-port)]
+       [(or #false "-") (current-input-port)]
        [filepath (open-input-file filepath #:mode 'text)]))
         
     (define program (port->lines #:close? #true))
     
     (define bitcode (assemble program))
-
+    
     (define length-written (case (output-mode)
-      [(binary)
-       (let ([buffer (make-bytes (* 2 (length bitcode)))])
-         (for ([word bitcode]
-               [index (in-naturals)])
-           (integer->integer-bytes word
-                                   2
-                                   #false
-                                   #true
-                                   buffer
-                                   (* 2 index)))
-         (write-bytes buffer))]
-      [(text)
-       (write-string (string-join (map (λ (word) (~a (number->string word 8) #:width 4 #:align 'right #:pad-string "0"))
-                                       bitcode)
-                                  "\n" #:after-last "\n"))]))
+                             [(binary)
+                              (define buffer-length (if (binary-padding)
+                                                        (begin
+                                                          (when (> (length bitcode) 4096)
+                                                            (raise-error "generated code exceded 4096 word limit"))
+                                                          4096)
+                                                        (length bitcode)))
+                              (let ([buffer (make-bytes (* 2 buffer-length))])
+                                (for ([word bitcode]
+                                      [index (in-naturals)])
+                                  (integer->integer-bytes word
+                                                          2
+                                                          #false
+                                                          #false
+                                                          buffer
+                                                          (* 2 index)))
+                                (write-bytes buffer))]
+                             [(text)
+                              (write-string (string-join (map (λ (word) (~a (number->string word 8) #:width 4 #:align 'right #:pad-string "0"))
+                                                              bitcode)
+                                                         "\n" #:after-last "\n"))]))
     
     (close-output-port (current-output-port))))
   

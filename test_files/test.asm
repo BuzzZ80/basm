@@ -1,9 +1,8 @@
 const print = 0x105
-const 
 
 start:
 	mov ac, message
-	jsr print
+	jsr print2
 	hlt
 
 ; data

@@ -3,6 +3,8 @@
 (require racket/match
          racket/list
          racket/format
+         racket/function
+         "error.rkt"
          "parser.rkt")
 
 (provide assemble)
@@ -45,7 +47,8 @@
     [(operand (reference (immediate (? expression? expr))))
      (list #b101 (replace-expression expr))]
     [(operand (reference-indexed (immediate (? expression? expr))))
-     (list #b110 (replace-expression expr))]))
+     (list #b110 (replace-expression expr))]
+    [_ (error "invalid operand")]))
 
 (define (make-op-code con op1 op2 rs1)
   (op-code (+ (if (condition-inv con) 4 0)
@@ -106,7 +109,7 @@
           (make-op-code con op1 op2a rs1)]
          [((? operand? rs1) (operand (direct-register 'ac)))
           (make-op-code con op1 op2b rs1)]
-         [(_ _) (raise-user-error "invalid operation")]))
+         [(_ _) (raise-error "Invalid operands. One operand must be `Ac`.")]))
      (define (encode-register reg)
        (match reg
          ['ac 0]
@@ -127,7 +130,10 @@
                                  [((reference rs1) (direct-register reg) )
                                   (make-op-code con #b010 (+ #b000 (encode-register reg)) rs1)]
                                  [((reference-indexed rs1) (direct-register reg))
-                                  (make-op-code con #b010 (+ #b100 (encode-register reg)) rs1)])]))]))
+                                  (make-op-code con #b010 (+ #b100 (encode-register reg)) rs1)]
+                                 [(_ _) (raise-error "Invalid use of mov")])]
+                         [_ (error "invalid instruction")]))]
+    [_ (error "Invalid instruction")]))
 
 (struct codegen-label (name) #:prefab)
 (struct codegen-constant (name value) #:prefab)
@@ -164,20 +170,25 @@
                  [_ env]))])))
 
 (define (stitch-bitcode items env)
-  (append* (for/list ([item items])
-             (map (match-lambda
-                    [(? symbol? id) (hash-ref env id)]
-                    [(? number? n) n])
-                  (codegen-item-bitcode item)))))
+  (append* (for/list ([item items]
+                      [line-number (in-naturals 1)])
+             (parameterize ([error-line-number line-number])
+               (map (match-lambda
+                      [(? symbol? id) (hash-ref env
+                                                id
+                                                (thunk (raise-error (format "Unbound identifier '~a'" id))))]
+                      [(? number? n) n])
+                    (codegen-item-bitcode item))))))
 
 ; program must be a list of strings
 (define (assemble program)
   (define codegen-items (for/list ([str program]
                                    [line-number (in-naturals 1)])
-                          (define ast (parse-string str))
-                          (unless ast
-                            (raise-user-error (format "unable to parse '~a' at line ~a" str line-number)))
-                          (make-codegen-item ast)))
+                          (parameterize ([error-line-number line-number])
+                            (define ast (parse-string str))
+                            (unless ast
+                              (raise-error "invalid syntax"))
+                            (make-codegen-item ast))))
   (define environment (gather-environment codegen-items))
   (define final-bitcode (stitch-bitcode codegen-items environment))
   final-bitcode)
