@@ -101,7 +101,9 @@
                          ['jmp (make-op-code con #b110 #b000 rs1)]
                          ['jsr (make-op-code con #b110 #b010 rs1)]
                          ['dec (make-op-code con #b110 #b100 rs1)]
-                         ['inc (make-op-code con #b110 #b101 rs1)]))]
+                         ['inc (make-op-code con #b110 #b101 rs1)]
+                         ['xor (make-op-code con #b111 #b010 rs1)]
+                         ['xnr (make-op-code con #b111 #b011 rs1)]))]
     [(operation (binary-instruction inst) (list operand1 operand2) con)
      (define (make-swap-op op1 op2a op2b)
        (match* (operand1 operand2)

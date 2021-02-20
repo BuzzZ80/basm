@@ -2,7 +2,8 @@ const print = 0x105
 
 start:
 	mov ac, message
-	jsr print2
+	jsr print
+	xor 0x024
 	hlt
 
 ; data
