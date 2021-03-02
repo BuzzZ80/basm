@@ -125,6 +125,10 @@
                          ['sbb (make-swap-op #b100 #b011 #b101)]
                          ['mov (match* (operand1 operand2)
                                  [((? operand? rs2) (? operand? rs1))
+                                  (match rs2
+                                    [(operand (immediate _))
+                                     (raise-error "direct immediate not allwed in rs2")]
+                                    [_ #f])
                                   (make-op-code con #b000 rs2 rs1)]
                                  [((direct-register reg) (reference rs1))
                                   (make-op-code con #b001 (+ #b000 (encode-register reg)) rs1)]
