@@ -23,6 +23,7 @@
          (struct-out reference-indexed)
          (struct-out operand)
          (struct-out immediate)
+         (struct-out immId)
          (struct-out stack)
          (struct-out condition)
          (struct-out operation)
@@ -67,7 +68,7 @@
   (define implied-instrs '(hlt ret clc clz sec sez))
   (define unary-instrs '(add adc sbw swb nnd and aib anb bia bna ora nor jmp jsr dec inc xor xnr))
   (define binary-instrs '(mov sub sbb cmp))
-  (define registers '(ac br ix sp stack))
+  (define registers '(ac br ix sp stack imm))
   
   (define (cut prefix)
     (substring str (string-length prefix)))
@@ -231,6 +232,7 @@
 
 (struct operand (reg) #:prefab)
 (struct immediate (imm) #:prefab)
+(struct immId () #:prefab)
 (struct stack () #:prefab)
 (define-app-pattern ~@operand
   (match-lambda
@@ -238,6 +240,8 @@
      (operand reg)]
     [(list (register-token 'stack))
      (operand (stack))]
+    [(list (register-token 'imm))
+     (operand (immId))]
     [(list (~@expr imm))
      (operand (immediate imm))]
     [(@reference (list (~@expr imm)))

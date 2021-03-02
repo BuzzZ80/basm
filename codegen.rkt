@@ -41,6 +41,7 @@
        ['br #b001]
        ['ix #b010]
        ['sp #b011])]
+    [(operand (immId)) #b100]
     [(operand (stack)) #b111]
     [(operand (immediate (? expression? expr)))
      (list #b100 (replace-expression expr))]
