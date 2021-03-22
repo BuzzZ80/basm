@@ -1,0 +1,113 @@
+Assembly         |3 Bit Cond |3 Bit Op |1/3b OP / 2/3b Rs2|3 Bit Rs1 | RTL                        |Full Name
+
+MOV Rs2, Rs1     |Condition  |000      |Rs2               |Rs1       | Rs2 <= Rs1                 | Move
+MOV Rs2, (Rs1)   |Condition  |001      |0     |Rs2        |Rs1       | Rs2 <= (Rs1)               | Move
+MOV Rs2, (Rs1+Ix)|Condition  |001      |1     |Rs2        |Rs1       | Rs2 <= (Rs1+Ix)            | Move
+MOV (Rs1), Rs2   |Condition  |010      |0     |Rs2        |Rs1       | (Rs1) <= Rs2               | Move
+MOV (Rs1+Ix), Rs2|Condition  |010      |1     |Rs2        |Rs1       | (Rs1+Ix) <= Rs2            | Move
+unused           |Condition  |011      |xxx               |Rs1       |                            | 
+
+ADD Rs1          |Condition  |100      |000               |Rs1       | Ac <= Ac + Rs1             | Add
+ADC Rs1          |Condition  |100      |001               |Rs1       | Ac <= Ac + Rs1 + Cry       | Add with carry
+SUB Ac, Rs1      |Condition  |100      |010               |Rs1       | Ac <= Ac - Rs1             | Subtract
+SBB Ac, Rs1      |Condition  |100      |011               |Rs1       | Ac <= Ac - Rs1 - Cry       | Subtract with borrow
+SUB Rs1, Ac      |Condition  |100      |100               |Rs1       | Ac <= Rs1 - Ac             | Subtract
+SBB Rs1, Ac      |Condition  |100      |101               |Rs1       | Ac <= Rs1 - Ac - Cry       | Subtract with borrow
+SBW Rs1          |Condition  |100      |110               |Rs1       | Ac <= -Rs1 - Ac - 1        | Subtract (weird)
+SWB Rs1          |Condition  |100      |111               |Rs1       | Ac <= -Rs1 - Ac - 1 - Cry  | Subtract (weird) with borrow
+
+NND Rs1          |Condition  |101      |000               |Rs1       | Ac <= (Ac & Rs1)'          | NAND
+AND Rs1          |Condition  |101      |001               |Rs1       | Ac <= (Ac & Rs1)           | AND
+AIB Rs1          |Condition  |101      |010               |Rs1       | Ac <= (Ac & Rs1')'         | A IMPLIES B
+ANB Rs1          |Condition  |101      |011               |Rs1       | Ac <= (Ac & Rs1')          | A NIMPLIES B
+BIA Rs1          |Condition  |101      |100               |Rs1       | Ac <= (Ac' & Rs1)'         | B IMPLIES A
+BNA Rs1          |Condition  |101      |101               |Rs1       | Ac <= (Ac' & Rs1)          | B NIMPLIES A
+ORA Rs1          |Condition  |101      |110               |Rs1       | Ac <= (Ac' & Rs1')'        | OR
+NOR Rs1          |Condition  |101      |111               |Rs1       | Ac <= (Ac' & Rs1')         | NOR
+
+JMP Rs1          |Condition  |110      |000               |Rs1       | Pc <= Rs1 - 1              | Jump
+HLT              |Condition  |110      |001               |Rs1       | Hlt <= 1                   | Halt
+JSR Rs1          |Condition  |110      |010               |Rs1       | Stack <= Pc, Pc <= Rs1 - 1 | Jump to subroutine
+RET              |Condition  |110      |011               |Rs1       | PC <= Stack                | Return from subroutine
+DEC Rs1          |Condition  |110      |100               |Rs1       | Rs1 <= Rs1 - 1             | Decrement
+INC Rs1          |Condition  |110      |101               |Rs1       | Rs1 <= Rs1 + 1             | Increment
+unused           |Condition  |110      |110               |Rs1       |                            | 
+unused           |Condition  |110      |111               |Rs1       |                            | 
+
+CMP Ac, Rs1      |Condition  |111      |000               |Rs1       | Ac - Rs1                   | Compare
+CMP Rs1, Ac      |Condition  |111      |001               |Rs1       | Rs1 - Ac                   | Compare
+XOR Rs1          |Condition  |111      |010               |Rs1       | Ac <= (Ac ⊕ Rs1)           | Exclusive OR
+XNR Rs1          |Condition  |111      |011               |Rs1       | Ac <= (Ac ⊕ Rs1)'          | Exclusive NOR
+CLC              |Condition  |111      |100               |Rs1       | C <= 0                     | Clear C
+CLZ              |Condition  |111      |101               |Rs1       | Z <= 0                     | Clear Z
+SEC              |Condition  |111      |110               |Rs1       | C <= 1                     | Set C
+SEZ              |Condition  |111      |111               |Rs1       | Z <= 1                     | Set Z
+
+Condition word:
+1b Inv |1b Z |1b C |Condition
+0      |0    |0    |1
+0      |0    |1    |C
+0      |1    |0    |Z
+0      |1    |1    |C & Z
+1      |0    |0    |1
+1      |0    |1    |C'
+1      |1    |0    |Z'
+1      |1    |1    |C' & Z'
+
+Register word:
+1b Mem |1b S1 |1b S2 |Register                  |Register Shorthand |
+0      |0     |0     |Accumulator               |Ac                 |
+0      |0     |1     |B Register                |Br                 |
+0      |1     |0     |Index Register            |Ix                 |
+0      |1     |1     |Stack Pointer             |Sp                 |
+1      |0     |0     |Immediate / (Pc)          |Imm                | *Acts as (Pc) during writes, always written "Imm"
+1      |0     |1     |Immediate Pointer         |(Imm)              |
+1      |1     |0     |Immediate Pointer Indexed |(Imm,Ix)           |
+1      |1     |1     |Stack                     |Stack              |
+
+Rules for assembly:
+ Conditions are represented as follows:
+  Carry : -C
+  Zero  : -Z
+  !Carry: -NC
+  !Zero : -NZ
+  Z&C   : -CZ
+  !Z&C  : -NCZ
+  Example:
+   MOV Ac, Br -NZ
+
+Lower level stuff:
+
+Main busses:
+ Int - Internal data bus
+ Ext - External data bus
+ Adr - Address bus
+
+Registers:
+ Direct use:
+  Ac - Accumulator
+  Br - B register
+  Ix - Index register
+  Sp - Stack pointer
+ 
+
+ Temporary internal use:
+  Tmp - Basic temporary register
+  Acb - Accumulator buffer to ALU
+  Opr - Operand to ALU (can be incremented or decremented)
+        Also used for temporarily holding Rs1's contents
+  Map - Memory address pointer
+  Nst - Instruction register
+  Pc  - Program counter, stores current memory location being executed from
+ 
+
+Clock cycles per instruction:
+ 8 clock cycles per instruction, always.
+ C1 - Fetch opcode 
+ C2 - If Imm   : Pc <= Pc + 1
+ C3 - If Imm   : Mp <= external-bus
+ C4 - If Stack : Adr <= Sp
+      If (   ) : Adr <= Mp
+      If +Ix   : Adr <= Adr + Ix
+ C5 - If Stack: Sp <= Sp + 1
+ 
